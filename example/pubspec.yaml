@@ -1,0 +1,28 @@
+name: niim_blue_flutter_example
+description: Example app for niim_blue_flutter library
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  niim_blue_flutter:
+    path: ../
+  flutter_blue_plus: ^1.36.8
+  image: ^4.6.0
+  permission_handler: ^11.3.0
+  device_info_plus: ^11.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
