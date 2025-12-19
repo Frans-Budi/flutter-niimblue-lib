@@ -276,6 +276,7 @@ class PacketGenerator {
       mapped(RequestCommandId.labelPositioningCalibration, [value]);
 
   static NiimbotPacket startFirmwareUpgrade(String version) {
+    // ignore: deprecated_member_use
     final regex = RegExp(r'^\d+\.\d+$');
     if (!regex.hasMatch(version)) {
       throw Exception('Invalid version format (x.x expected)');

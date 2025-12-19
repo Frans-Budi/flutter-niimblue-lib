@@ -1,7 +1,7 @@
 /// Niim Blue Flutter Library
 ///
 /// A Flutter library for Bluetooth LE printing with NIIMBOT thermal printers.
-library niim_blue_flutter;
+library;
 
 // Packets
 export 'src/packets/packet.dart';

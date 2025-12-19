@@ -208,7 +208,7 @@ abstract class NiimbotAbstractClient extends EventEmitter {
       if (nextHeaderPos > 0) {
         if (debug) {
           print(
-              'Found next header at position $nextHeaderPos, discarding ${nextHeaderPos} bytes');
+              'Found next header at position $nextHeaderPos, discarding $nextHeaderPos bytes');
         }
         _packetBuf = _packetBuf.sublist(nextHeaderPos);
       } else {

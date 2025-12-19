@@ -1,12 +1,10 @@
 import 'abstract_print_task.dart';
 import '../packets/packet_generator.dart';
-import '../packets/abstraction.dart';
 import '../print_page.dart';
 
 /// Print task for B1 printer model
 class B1PrintTask extends AbstractPrintTask {
-  B1PrintTask(Abstraction abstraction, [PrintOptions? options])
-      : super(abstraction, options);
+  B1PrintTask(super.abstraction, [super.options]);
 
   @override
   Future<void> printInit() {

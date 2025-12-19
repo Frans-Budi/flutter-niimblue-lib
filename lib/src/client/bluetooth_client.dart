@@ -318,7 +318,7 @@ class NiimbotBluetoothClient extends NiimbotAbstractClient {
   /// Check if Bluetooth is available and enabled
   static Future<bool> isBluetoothAvailable() async {
     try {
-      final isAvailable = await FlutterBluePlus.isAvailable;
+      final isAvailable = await FlutterBluePlus.isSupported;
       if (!isAvailable) return false;
 
       final state = await FlutterBluePlus.adapterState.first;

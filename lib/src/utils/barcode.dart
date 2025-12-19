@@ -54,6 +54,7 @@ EAN13Result ean13(String data) {
   if (data.length < 12) {
     data = data.padRight(12, '0');
   }
+  // ignore: deprecated_member_use
   if (!RegExp(r'^\d+$').hasMatch(data)) {
     throw ArgumentError('Invalid character in EAN13');
   }

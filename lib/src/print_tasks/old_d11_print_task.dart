@@ -1,12 +1,10 @@
 import 'abstract_print_task.dart';
 import '../packets/packet_generator.dart';
-import '../packets/abstraction.dart';
 import '../print_page.dart';
 
 /// Print task for old D11 printer models (legacy devices)
 class OldD11PrintTask extends AbstractPrintTask {
-  OldD11PrintTask(Abstraction abstraction, [PrintOptions? options])
-      : super(abstraction, options);
+  OldD11PrintTask(super.abstraction, [super.options]);
 
   @override
   Future<void> printInit() {

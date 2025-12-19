@@ -1,12 +1,10 @@
 import 'abstract_print_task.dart';
 import '../packets/packet_generator.dart';
-import '../packets/abstraction.dart';
 import '../print_page.dart';
 
 /// Print task for D110 (old firmware) printer
 class D110PrintTask extends AbstractPrintTask {
-  D110PrintTask(Abstraction abstraction, [PrintOptions? options])
-      : super(abstraction, options);
+  D110PrintTask(super.abstraction, [super.options]);
 
   @override
   Future<void> printInit() {

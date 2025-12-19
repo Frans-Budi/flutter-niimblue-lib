@@ -1,3 +1,10 @@
+## 1.0.1
+
+* Improved package metadata with topics for better discoverability
+* Fixed linter warnings (avoid_print, RegExp deprecation)
+* Added .pubignore for cleaner package distribution
+* Code cleanup: removed unnecessary comments
+
 ## 1.0.0
 
 * Initial release

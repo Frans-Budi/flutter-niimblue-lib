@@ -1,12 +1,10 @@
 import 'abstract_print_task.dart';
-import '../packets/abstraction.dart';
 import '../packets/packet_generator.dart';
 import '../print_page.dart';
 
 /// Print task for D110 MV4 (B21 Pro) printer models
 class D110MV4PrintTask extends AbstractPrintTask {
-  D110MV4PrintTask(Abstraction abstraction, [PrintOptions? options])
-      : super(abstraction, options);
+  D110MV4PrintTask(super.abstraction, [super.options]);
 
   @override
   Future<void> printInit() {
