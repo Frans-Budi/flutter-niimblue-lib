@@ -68,6 +68,7 @@ class NiimbotBluetoothClient extends NiimbotAbstractClient {
 
     try {
       await _device!.connect(
+        license: License.nonprofit,
         timeout: const Duration(milliseconds: connectTimeout),
         autoConnect: false,
       );

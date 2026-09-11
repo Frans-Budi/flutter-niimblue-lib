@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.niim_blue_flutter_example"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -24,7 +24,7 @@ android {
         applicationId = "com.example.niim_blue_flutter_example"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 21  // Required for Bluetooth LE
+        minSdk = flutter.minSdkVersion  // Required for Bluetooth LE
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
