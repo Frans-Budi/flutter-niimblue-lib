@@ -2,7 +2,7 @@ import 'abstract_print_task.dart';
 import '../packets/packet_generator.dart';
 import '../print_page.dart';
 
-/// Print task for D110 MV4 (B21 Pro) printer models
+/// Print task for D110 MV4, B21 Pro, and B1 Pro printer models.
 class D110MV4PrintTask extends AbstractPrintTask {
   D110MV4PrintTask(super.abstraction, [super.options]);
 
@@ -27,7 +27,7 @@ class D110MV4PrintTask extends AbstractPrintTask {
   Future<void> printPage(EncodedImage image, [int quantity = 1]) async {
     checkAddPage(quantity);
 
-    // B21_PRO does not respond on first packet after PrintStart if using Bluetooth connection.
+    // These models may not respond on the first packet after PrintStart over BLE.
     // Originally PrintStatus is sent, no response waited.
     final statusPacket = PacketGenerator.printStatus();
     statusPacket.oneWay = true;
@@ -65,7 +65,7 @@ class D110MV4PrintTask extends AbstractPrintTask {
 
   @override
   Future<bool> printEnd() async {
-    // B21_PRO drops the first packet after PrintEnd.
+    // These models may drop the first packet after PrintEnd.
     // Originally `Heartbeat` is sent, no response waited.
     final pkt = PacketGenerator.heartbeat(1);
     pkt.oneWay = true;

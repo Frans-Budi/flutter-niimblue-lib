@@ -19,8 +19,6 @@ class NiimbotBluetoothClient extends NiimbotAbstractClient {
   static const int connectTimeout = 15000;
   static const int streamStabilizeDelay = 1000;
   static const int defaultScanTimeout = 5000;
-  static const int defaultPacketInterval = 10;
-
   BluetoothDevice? _device;
   BluetoothCharacteristic? _writeCharacteristic;
   BluetoothCharacteristic? _notifyCharacteristic;
@@ -85,14 +83,20 @@ class NiimbotBluetoothClient extends NiimbotAbstractClient {
         orElse: () => throw Exception('NIIMBOT service not found'),
       );
 
+      BluetoothCharacteristic? writeWithResponse;
       for (var char in niimbotService.characteristics) {
-        if (char.properties.write || char.properties.writeWithoutResponse) {
+        if (char.properties.writeWithoutResponse &&
+            _writeCharacteristic == null) {
           _writeCharacteristic = char;
+        } else if (char.properties.write && writeWithResponse == null) {
+          writeWithResponse = char;
         }
         if (char.properties.notify) {
           _notifyCharacteristic = char;
         }
       }
+
+      _writeCharacteristic ??= writeWithResponse;
 
       if (_writeCharacteristic == null) {
         throw Exception('Write characteristic not found');
@@ -189,15 +193,14 @@ class NiimbotBluetoothClient extends NiimbotAbstractClient {
     }
 
     try {
-      if (_writeCharacteristic!.properties.write) {
-        await _writeCharacteristic!.write(data, withoutResponse: false);
-      } else {
+      if (_writeCharacteristic!.properties.writeWithoutResponse) {
         await _writeCharacteristic!.write(data, withoutResponse: true);
+      } else {
+        await _writeCharacteristic!.write(data, withoutResponse: false);
       }
 
-      if (!force) {
-        await Future.delayed(
-            const Duration(milliseconds: defaultPacketInterval));
+      if (!force && packetIntervalMs > 0) {
+        await Future.delayed(Duration(milliseconds: packetIntervalMs));
       }
     } catch (e) {
       rethrow;

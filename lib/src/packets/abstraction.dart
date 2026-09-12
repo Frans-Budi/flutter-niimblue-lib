@@ -496,6 +496,7 @@ class Abstraction {
     int pollIntervalMs = 300,
   ]) async {
     final completer = Completer<void>();
+    var completed = false;
 
     client.emit(
         'printStatus',
@@ -505,26 +506,43 @@ class Abstraction {
           pageFeedProgress: 0,
         ));
 
-    _statusPollTimer = Timer.periodic(
-      Duration(milliseconds: pollIntervalMs),
-      (_) async {
-        try {
-          final status = await getPrintStatus(2);
+    Future<void> poll() async {
+      if (completed) return;
 
-          client.emit('printStatus', status);
+      try {
+        final status = await getPrintStatus(2);
 
-          if (status.page == pagesToPrint &&
-              status.pagePrintProgress == 100 &&
-              status.pageFeedProgress == 100) {
-            _statusPollTimer?.cancel();
-            completer.complete();
-          }
-        } catch (e) {
+        client.emit('printStatus', status);
+
+        final isB1Pro = client.getPrinterInfo().modelId == 4097;
+        final isComplete = status.page == pagesToPrint &&
+            (status.pagePrintProgress == 100 &&
+                    status.pageFeedProgress == 100 ||
+                isB1Pro &&
+                    status.pagePrintProgress == 100 &&
+                    status.pageFeedProgress == 0);
+
+        if (isComplete) {
+          completed = true;
           _statusPollTimer?.cancel();
-          completer.completeError(e);
+          completer.complete();
+          return;
         }
-      },
-    );
+
+        // Use a one-shot timer so a slow BLE response cannot overlap with
+        // another status request on the same connection.
+        _statusPollTimer = Timer(
+          Duration(milliseconds: pollIntervalMs),
+          () => unawaited(poll()),
+        );
+      } catch (error, stackTrace) {
+        completed = true;
+        _statusPollTimer?.cancel();
+        completer.completeError(error, stackTrace);
+      }
+    }
+
+    unawaited(poll());
 
     return completer.future;
   }

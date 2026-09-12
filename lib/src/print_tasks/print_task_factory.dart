@@ -47,6 +47,7 @@ final Map<PrintTaskName, List<dynamic>> modelPrintTasks = {
   ],
   PrintTaskName.d110mV4: [
     const ModelWithProtocol(PrinterModel.d110M, 4),
+    PrinterModel.b1Pro,
     PrinterModel.d11H,
     PrinterModel.b21Pro,
   ],

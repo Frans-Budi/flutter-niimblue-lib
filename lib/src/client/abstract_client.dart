@@ -73,20 +73,30 @@ abstract class NiimbotAbstractClient extends EventEmitter {
     int timeoutMs = 1000,
   ]) async {
     return _mutex.synchronized(() async {
-      await sendPacket(packet, force: true);
-
       if (packet.oneWay) {
+        await sendPacket(packet);
         return NiimbotPacket(
           command: ResponseCommandId.inInvalid,
           data: Uint8List(0),
         );
       }
 
-      return waitForPacket(
+      // Subscribe before writing so fast printers cannot answer before the
+      // response listener is attached.
+      final response = waitForPacket(
         packet.validResponseIds,
         catchErrorPackets: true,
         timeoutMs: timeoutMs,
       );
+
+      try {
+        await sendPacket(packet);
+      } catch (error) {
+        response.ignore();
+        rethrow;
+      }
+
+      return response;
     });
   }
 

@@ -139,9 +139,12 @@ class _AppContentState extends State<AppContent> {
       final client = NiimbotBluetoothClient();
       client.setDevice(device);
       final result = await client.connect();
+      final printerInfo = client.getPrinterInfo();
+      final model = client.getModelMetadata()?.model.value ?? 'UNKNOWN';
       setState(() {
         _client = client;
-        _status = 'Connected to ${result.deviceName}';
+        _status =
+            'Connected to ${result.deviceName} ($model, ID ${printerInfo.modelId}, protocol ${printerInfo.protocolVersion})';
       });
       _client!.startHeartbeat();
     } catch (error) {
@@ -206,15 +209,21 @@ class _AppContentState extends State<AppContent> {
   }
 
   Future<void> _executePrintTask(PrintPage page, String successMessage) async {
-    if (_client == null || !_client!.isConnected()) {
+    final client = _client;
+    if (client == null || !client.isConnected()) {
       throw Exception('Not connected');
     }
 
-    try {
-      _client!.stopHeartbeat();
-      _client!.packetIntervalMs = 0;
+    AbstractPrintTask? task;
+    var printEnded = false;
 
-      final task = _client!.createPrintTask(
+    try {
+      client.stopHeartbeat();
+      client.setPacketInterval(
+        client.getPrinterInfo().modelId == 4097 ? 2 : 0,
+      );
+
+      task = client.createPrintTask(
         const PrintOptions(
           totalPages: 1,
           density: 3,
@@ -231,17 +240,34 @@ class _AppContentState extends State<AppContent> {
       }
 
       await task.printInit();
-      await task.printPage(page.toEncodedImage(), 1);
+
+      final encodedImage = page.toEncodedImage();
+
+      await task.printPage(encodedImage, 1);
+
       await task.waitForFinished();
 
-      _client!.startHeartbeat();
+      await task.printEnd();
+      printEnded = true;
+
       if (mounted) {
         _showAlert('Success', successMessage);
       }
     } catch (error) {
-      _client!.startHeartbeat();
       if (mounted) {
         _showAlert('Error', 'Failed to print: ${error.toString()}');
+      }
+    } finally {
+      if (task != null && !printEnded && client.isConnected()) {
+        try {
+          await task.printEnd();
+        } catch (_) {
+          // Preserve the original print error while still attempting cleanup.
+        }
+      }
+
+      if (identical(_client, client) && client.isConnected()) {
+        client.startHeartbeat();
       }
     }
   }
