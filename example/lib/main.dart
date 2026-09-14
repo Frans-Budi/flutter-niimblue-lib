@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -41,6 +42,8 @@ class _AppContentState extends State<AppContent> {
   Uint8List? _previewImage;
   bool _showPreview = false;
   Future<void> Function()? _pendingPrintAction;
+
+  int get _printWidth => 472;
 
   Future<bool> _requestPermissions() async {
     if (Platform.isIOS) {
@@ -219,9 +222,7 @@ class _AppContentState extends State<AppContent> {
 
     try {
       client.stopHeartbeat();
-      client.setPacketInterval(
-        client.getPrinterInfo().modelId == 4097 ? 2 : 0,
-      );
+      client.setPacketInterval(client.getPrinterInfo().modelId == 4097 ? 2 : 0);
 
       task = client.createPrintTask(
         const PrintOptions(
@@ -277,27 +278,41 @@ class _AppContentState extends State<AppContent> {
       _showAlert('Error', 'Not connected');
       return;
     }
+    final modelMetaData = _client?.getModelMetadata();
+    debugPrint('densityDefault: ${modelMetaData?.densityDefault}');
+    debugPrint('densityMax: ${modelMetaData?.densityMax}');
+    debugPrint('densityMin: ${modelMetaData?.densityMin}');
+    debugPrint('dpi: ${modelMetaData?.dpi}');
+    debugPrint('id: ${modelMetaData?.id}');
+    debugPrint('model.value: ${modelMetaData?.model.value}');
+    debugPrint('paperTypes: ${modelMetaData?.paperTypes}');
+    debugPrint('printDirection: ${modelMetaData?.printDirection}');
+    debugPrint('printheadPixels: ${modelMetaData?.printheadPixels}');
 
-    final page = PrintPage(8, 1);
-    for (int i = 0; i < 8; i++) {
-      page.addLine(
-          const LineOptions(x: 0, y: 0, endX: 0, endY: 0, thickness: 1));
-    }
+    final page = PrintPage(_printWidth, 345);
+    // for (int i = 0; i < 8; i++) {
+    page.addLine(LineOptions(x: 0, y: 340, endX: 585, endY: 340, thickness: 3));
+    // }
 
     await _executePrintTask(page, 'Print sent');
   }
 
   Future<void> _handlePrintSimple() async {
-    // Simple demo without text rendering - just QR and barcode
-    final page = PrintPage(400, 240);
+    // Match the page width to the connected printer's printable head width.
+    final pageWidth = 576;
+    final pageHeight = 354;
+    final page = PrintPage(pageWidth, pageHeight);
+    final centerY = pageHeight ~/ 2;
+    final qrSize = (pageWidth * 0.26).round();
+    final barcodeWidth = (pageWidth * 0.42).round();
 
     page.addQR(
       'Hello Niimbot',
-      const QROptions(
-        x: 100,
-        y: 120,
-        width: 100,
-        height: 100,
+      QROptions(
+        x: pageWidth ~/ 4,
+        y: centerY,
+        width: qrSize,
+        height: qrSize,
         align: HAlignment.center,
         vAlign: VAlignment.middle,
       ),
@@ -305,12 +320,12 @@ class _AppContentState extends State<AppContent> {
 
     page.addBarcode(
       '123456789012',
-      const BarcodeOptions(
+      BarcodeOptions(
         encoding: BarcodeEncoding.ean13,
-        x: 300,
-        y: 120,
-        width: 150,
-        height: 60,
+        x: pageWidth * 3 ~/ 4,
+        y: centerY,
+        width: barcodeWidth,
+        height: (pageHeight * 0.3).round(),
         align: HAlignment.center,
         vAlign: VAlignment.middle,
       ),
@@ -322,39 +337,51 @@ class _AppContentState extends State<AppContent> {
   }
 
   Future<void> _handlePrintBoldText() async {
-    final page = PrintPage(400, 240);
+    final pageWidth = 472;
+    final page = PrintPage(pageWidth, 345);
+    final centerX = pageWidth ~/ 2;
 
     await page.addText(
-        'Normal Text',
-        const TextOptions(
-          x: 200,
-          y: 60,
-          fontSize: 18,
-          align: HAlignment.center,
-          vAlign: VAlignment.middle,
-        ));
+      'Hello World',
+      TextOptions(
+        x: 0,
+        y: 60,
+        fontSize: 75,
+        align: HAlignment.left,
+        vAlign: VAlignment.middle,
+      ),
+    );
 
     await page.addText(
-        'Bold Text',
-        const TextOptions(
-          x: 200,
-          y: 120,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          align: HAlignment.center,
-          vAlign: VAlignment.middle,
-        ));
+      'Bold Text',
+      TextOptions(
+        x: centerX,
+        y: 150,
+        fontSize: 75,
+        fontWeight: FontWeight.bold,
+        align: HAlignment.center,
+        vAlign: VAlignment.middle,
+      ),
+    );
 
     await page.addText(
-        'Light Text',
-        const TextOptions(
-          x: 200,
-          y: 180,
-          fontSize: 18,
-          fontWeight: FontWeight.w300,
-          align: HAlignment.center,
-          vAlign: VAlignment.middle,
-        ));
+      'Light Text',
+      const TextOptions(
+        x: 60,
+        y: 240,
+        fontSize: 75,
+        fontWeight: FontWeight.w300,
+        align: HAlignment.left,
+        vAlign: VAlignment.middle,
+      ),
+    );
+
+    page.addLine(
+      LineOptions(x: 60, y: 15, endX: _printWidth, endY: 15, thickness: 3),
+    );
+    page.addLine(
+      LineOptions(x: 60, y: 340, endX: _printWidth, endY: 340, thickness: 3),
+    );
 
     await _showPreviewAndPrint(page, () async {
       await _executePrintTask(page, 'Styled text printed');
@@ -362,15 +389,22 @@ class _AppContentState extends State<AppContent> {
   }
 
   Future<void> _handlePrintLandscape() async {
-    final page = PrintPage(320, 480, PageOrientation.landscape);
+    // Landscape output is a wide page. PageOrientation is for rotating
+    // content on a portrait label, not for changing the physical page size.
+    final pageWidth = _printWidth;
+    final pageHeight = (pageWidth * 320 / 480).round();
+    final page = PrintPage(pageWidth, pageHeight);
+    final centerX = pageWidth ~/ 2;
+    final centerY = pageHeight ~/ 2;
+    final qrSize = (pageHeight * 0.25).round();
 
     page.addQR(
       'Landscape',
-      const QROptions(
-        x: 240,
-        y: 240,
-        width: 80,
-        height: 80,
+      QROptions(
+        x: centerX,
+        y: (pageHeight * 0.75).round(),
+        width: qrSize,
+        height: qrSize,
         align: HAlignment.center,
         vAlign: VAlignment.middle,
       ),
@@ -378,29 +412,37 @@ class _AppContentState extends State<AppContent> {
 
     page.addBarcode(
       '987654321098',
-      const BarcodeOptions(
+      BarcodeOptions(
         encoding: BarcodeEncoding.code128,
-        x: 240,
-        y: 80,
-        width: 200,
-        height: 60,
+        x: centerX,
+        y: (pageHeight * 0.25).round(),
+        width: (pageWidth * 0.35).round(),
+        height: (pageHeight * 0.2).round(),
         align: HAlignment.center,
         vAlign: VAlignment.middle,
       ),
     );
 
     page.addLine(
-        const LineOptions(x: 40, y: 300, endX: 440, endY: 300, thickness: 2));
+      LineOptions(
+        x: 40,
+        y: centerY,
+        endX: pageWidth - 40,
+        endY: centerY,
+        thickness: 2,
+      ),
+    );
 
     await page.addText(
-        'LANDSCAPE MODE',
-        const TextOptions(
-          x: 240,
-          y: 160,
-          fontSize: 24,
-          align: HAlignment.center,
-          vAlign: VAlignment.middle,
-        ));
+      'LANDSCAPE MODE',
+      TextOptions(
+        x: centerX,
+        y: centerY,
+        fontSize: 24,
+        align: HAlignment.center,
+        vAlign: VAlignment.middle,
+      ),
+    );
 
     final heartData = [
       0,
@@ -666,7 +708,7 @@ class _AppContentState extends State<AppContent> {
         data: heartData,
         imageWidth: 16,
         imageHeight: 11,
-        x: 480,
+        x: pageWidth - 16,
         y: 0,
         width: 80,
         height: 80,
@@ -716,15 +758,16 @@ class _AppContentState extends State<AppContent> {
     );
 
     await page.addText(
-        'Hello NIIMBOT!',
-        const TextOptions(
-          x: 200,
-          y: 120,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
-          align: HAlignment.center,
-          vAlign: VAlignment.middle,
-        ));
+      'Hello NIIMBOT!',
+      const TextOptions(
+        x: 200,
+        y: 120,
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+        align: HAlignment.center,
+        vAlign: VAlignment.middle,
+      ),
+    );
 
     await page.addText(
       'v1.0',
@@ -1029,7 +1072,8 @@ class _AppContentState extends State<AppContent> {
     );
 
     page.addLine(
-        const LineOptions(x: 50, y: 220, endX: 350, endY: 220, thickness: 1));
+      const LineOptions(x: 50, y: 220, endX: 350, endY: 220, thickness: 1),
+    );
 
     await _showPreviewAndPrint(page, () async {
       await _executePrintTask(page, 'Comprehensive demo printed');
@@ -1079,20 +1123,41 @@ class _AppContentState extends State<AppContent> {
                       style: const TextStyle(fontSize: 16),
                     ),
                     const SizedBox(height: 20),
-                    _buildButton('🔌 Connect to Printer', _handleConnect,
-                        Colors.blue[700]!),
                     _buildButton(
-                        '⏏️ Disconnect', _handleDisconnect, Colors.blue[700]!),
-                    _buildButton('🖨️ Quick Print Test', _handlePrint,
-                        Colors.blue[700]!),
-                    _buildButton('🅰️ Bold Text Demo', _handlePrintBoldText,
-                        Colors.blue[700]!),
-                    _buildButton('📋 All-in-One Demo',
-                        _handlePrintComprehensive, const Color(0xFF5856D6)),
-                    _buildButton('🎨 Simple Demo', _handlePrintSimple,
-                        const Color(0xFF34C759)),
-                    _buildButton('📄 Landscape Mode', _handlePrintLandscape,
-                        const Color(0xFF34C759)),
+                      '🔌 Connect to Printer',
+                      _handleConnect,
+                      Colors.blue[700]!,
+                    ),
+                    _buildButton(
+                      '⏏️ Disconnect',
+                      _handleDisconnect,
+                      Colors.blue[700]!,
+                    ),
+                    _buildButton(
+                      '🖨️ Quick Print Test',
+                      _handlePrint,
+                      Colors.blue[700]!,
+                    ),
+                    _buildButton(
+                      '🅰️ Bold Text Demo',
+                      _handlePrintBoldText,
+                      Colors.blue[700]!,
+                    ),
+                    _buildButton(
+                      '📋 All-in-One Demo',
+                      _handlePrintComprehensive,
+                      const Color(0xFF5856D6),
+                    ),
+                    _buildButton(
+                      '🎨 Simple Demo',
+                      _handlePrintSimple,
+                      const Color(0xFF34C759),
+                    ),
+                    _buildButton(
+                      '📄 Landscape Mode',
+                      _handlePrintLandscape,
+                      const Color(0xFF34C759),
+                    ),
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -1115,16 +1180,11 @@ class _AppContentState extends State<AppContent> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           padding: const EdgeInsets.all(15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
         ),
         child: Text(
           label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-          ),
+          style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+
 import 'commands.dart';
 import 'packet.dart';
 import '../utils.dart';
@@ -30,8 +31,9 @@ class ImagePacketsGenerateOptions {
 class PacketGenerator {
   /// Maps a request command ID to its corresponding response IDs and creates a packet object
   static NiimbotPacket mapped(RequestCommandId sendCmd, [List<int>? data]) {
-    final dataBytes =
-        data != null ? Uint8List.fromList(data) : Uint8List.fromList([1]);
+    final dataBytes = data != null
+        ? Uint8List.fromList(data)
+        : Uint8List.fromList([1]);
     final respIds = commandsMap[sendCmd];
 
     if (respIds == null) {
@@ -87,15 +89,16 @@ class PacketGenerator {
   /// B1: use setPageSize6b instead to avoid blank pages
   /// D110: works normally
   static NiimbotPacket setPageSize4b(int rows, int cols) => mapped(
-      RequestCommandId.setPageSize,
-      [...Utils.u16ToBytes(rows), ...Utils.u16ToBytes(cols)]);
+    RequestCommandId.setPageSize,
+    [...Utils.u16ToBytes(rows), ...Utils.u16ToBytes(cols)],
+  );
 
   /// Set page size with dimensions and copies count
   static NiimbotPacket setPageSize6b(int rows, int cols, int copiesCount) =>
       mapped(RequestCommandId.setPageSize, [
         ...Utils.u16ToBytes(rows),
         ...Utils.u16ToBytes(cols),
-        ...Utils.u16ToBytes(copiesCount)
+        ...Utils.u16ToBytes(copiesCount),
       ]);
 
   /// Set page size (13-byte version, first seen on D110M v4)
@@ -107,20 +110,21 @@ class PacketGenerator {
     int cutType = 0,
     int sendAll = 0,
     int partHeight = 0,
-  }) =>
-      mapped(RequestCommandId.setPageSize, [
-        ...Utils.u16ToBytes(rows),
-        ...Utils.u16ToBytes(cols),
-        ...Utils.u16ToBytes(copiesCount),
-        ...Utils.u16ToBytes(cutHeight),
-        cutType,
-        0x00,
-        sendAll,
-        ...Utils.u16ToBytes(partHeight),
-      ]);
+  }) => mapped(RequestCommandId.setPageSize, [
+    ...Utils.u16ToBytes(rows),
+    ...Utils.u16ToBytes(cols),
+    ...Utils.u16ToBytes(copiesCount),
+    ...Utils.u16ToBytes(cutHeight),
+    cutType,
+    0x00,
+    sendAll,
+    ...Utils.u16ToBytes(partHeight),
+  ]);
 
   static NiimbotPacket setPrintQuantity(int quantity) => mapped(
-      RequestCommandId.printQuantity, Utils.u16ToBytes(quantity).toList());
+    RequestCommandId.printQuantity,
+    Utils.u16ToBytes(quantity).toList(),
+  );
 
   static NiimbotPacket printStatus() => mapped(RequestCommandId.printStatus);
 
@@ -132,20 +136,12 @@ class PacketGenerator {
 
   /// Print start (2-byte version)
   static NiimbotPacket printStart2b(int totalPages) => mapped(
-      RequestCommandId.printStart, Utils.u16ToBytes(totalPages).toList());
+    RequestCommandId.printStart,
+    Utils.u16ToBytes(totalPages).toList(),
+  );
 
   /// Print start (7-byte version)
   static NiimbotPacket printStart7b(int totalPages, [int pageColor = 0]) =>
-      mapped(RequestCommandId.printStart,
-          [...Utils.u16ToBytes(totalPages), 0x00, 0x00, 0x00, 0x00, pageColor]);
-
-  /// Print start (9-byte version, first seen on D110M v4)
-  static NiimbotPacket printStart9b(
-    int totalPages, {
-    int pageColor = 0,
-    int quality = 0,
-    bool someFlag = false,
-  }) =>
       mapped(RequestCommandId.printStart, [
         ...Utils.u16ToBytes(totalPages),
         0x00,
@@ -153,9 +149,24 @@ class PacketGenerator {
         0x00,
         0x00,
         pageColor,
-        quality,
-        someFlag ? 0x01 : 0x00
       ]);
+
+  /// Print start (9-byte version, first seen on D110M v4)
+  static NiimbotPacket printStart9b(
+    int totalPages, {
+    int pageColor = 0,
+    int quality = 0,
+    bool someFlag = false,
+  }) => mapped(RequestCommandId.printStart, [
+    ...Utils.u16ToBytes(totalPages),
+    0x00,
+    0x00,
+    0x00,
+    0x00,
+    pageColor,
+    quality,
+    someFlag ? 0x01 : 0x00,
+  ]);
 
   static NiimbotPacket printEnd() => mapped(RequestCommandId.printEnd);
 
@@ -164,7 +175,9 @@ class PacketGenerator {
   static NiimbotPacket pageEnd() => mapped(RequestCommandId.pageEnd);
 
   static NiimbotPacket printEmptySpace(int pos, int repeats) => mapped(
-      RequestCommandId.printEmptyRow, [...Utils.u16ToBytes(pos), repeats]);
+    RequestCommandId.printEmptyRow,
+    [...Utils.u16ToBytes(pos), repeats],
+  );
 
   static NiimbotPacket printBitmapRow(
     int pos,
@@ -173,10 +186,17 @@ class PacketGenerator {
     int printheadPixels, {
     String countsMode = 'auto',
   }) {
-    final counts =
-        _countPixelsForBitmapPacket(data, printheadPixels, countsMode);
-    return mapped(RequestCommandId.printBitmapRow,
-        [...Utils.u16ToBytes(pos), ...counts, repeats, ...data]);
+    final counts = _countPixelsForBitmapPacket(
+      data,
+      printheadPixels,
+      countsMode,
+    );
+    return mapped(RequestCommandId.printBitmapRow, [
+      ...Utils.u16ToBytes(pos),
+      ...counts,
+      repeats,
+      ...data,
+    ]);
   }
 
   /// Printer powers off if black pixel count > 6
@@ -187,8 +207,11 @@ class PacketGenerator {
     int printheadPixels, {
     String countsMode = 'auto',
   }) {
-    final counts =
-        _countPixelsForBitmapPacket(data, printheadPixels, countsMode);
+    final counts = _countPixelsForBitmapPacket(
+      data,
+      printheadPixels,
+      countsMode,
+    );
     final indexes = _indexPixels(data);
     final totalBlackPixels = _countBlackPixels(data);
 
@@ -196,8 +219,12 @@ class PacketGenerator {
       throw Exception('Black pixel count > 6 ($totalBlackPixels)');
     }
 
-    return mapped(RequestCommandId.printBitmapRowIndexed,
-        [...Utils.u16ToBytes(pos), ...counts, repeats, ...indexes]);
+    return mapped(RequestCommandId.printBitmapRowIndexed, [
+      ...Utils.u16ToBytes(pos),
+      ...counts,
+      repeats,
+      ...indexes,
+    ]);
   }
 
   static NiimbotPacket printClear() => mapped(RequestCommandId.printClear);
@@ -206,7 +233,9 @@ class PacketGenerator {
       mapped(RequestCommandId.writeRFID, data.toList());
 
   static NiimbotPacket checkLine(int line) => mapped(
-      RequestCommandId.printerCheckLine, [...Utils.u16ToBytes(line), 0x01]);
+    RequestCommandId.printerCheckLine,
+    [...Utils.u16ToBytes(line), 0x01],
+  );
 
   /// Generate packets for image data
   /// Handles different row types (pixels, void, check) and auto-selects indexed packets
@@ -226,32 +255,44 @@ class PacketGenerator {
       final dataType = d is Map ? d['dataType'] : d.dataType;
       final rowNumber = d is Map ? d['rowNumber'] : d.rowNumber;
       final repeat = d is Map ? d['repeat'] : d.repeat;
-      final blackPixelsCount =
-          d is Map ? d['blackPixelsCount'] : d.blackPixelsCount;
+      final blackPixelsCount = d is Map
+          ? d['blackPixelsCount']
+          : d.blackPixelsCount;
       final rowData = d is Map ? d['rowData'] : d.rowData;
 
       if (dataType == 'pixels') {
-        // Auto-select indexed packet for sparse rows (≤ 6 black pixels)
-        if (blackPixelsCount <= 6 && !opts.noIndexPacket) {
-          out.add(
-            printBitmapRowIndexed(
-              rowNumber,
-              repeat,
-              rowData!,
-              opts.printheadPixels,
-              countsMode: opts.countsMode,
-            ),
-          );
-        } else {
-          out.add(
-            printBitmapRow(
-              rowNumber,
-              repeat,
-              rowData!,
-              opts.printheadPixels,
-              countsMode: opts.countsMode,
-            ),
-          );
+        var currentRow = rowNumber as int;
+        var remaining = repeat as int;
+
+        while (remaining > 0) {
+          // Repeat count is a single byte in bitmap-row packets.
+          final chunk = remaining > 255 ? 255 : remaining;
+
+          // Auto-select indexed packet for sparse rows (≤ 6 black pixels).
+          if (blackPixelsCount <= 6 && !opts.noIndexPacket) {
+            out.add(
+              printBitmapRowIndexed(
+                currentRow,
+                chunk,
+                rowData!,
+                opts.printheadPixels,
+                countsMode: opts.countsMode,
+              ),
+            );
+          } else {
+            out.add(
+              printBitmapRow(
+                currentRow,
+                chunk,
+                rowData!,
+                opts.printheadPixels,
+                countsMode: opts.countsMode,
+              ),
+            );
+          }
+
+          currentRow += chunk;
+          remaining -= chunk;
         }
         continue;
       }
@@ -262,7 +303,16 @@ class PacketGenerator {
       }
 
       if (dataType == 'void') {
-        out.add(printEmptySpace(rowNumber, repeat));
+        var currentRow = rowNumber as int;
+        var remaining = repeat as int;
+
+        while (remaining > 0) {
+          // Repeat count is a single byte in empty-row packets.
+          final chunk = remaining > 255 ? 255 : remaining;
+          out.add(printEmptySpace(currentRow, chunk));
+          currentRow += chunk;
+          remaining -= chunk;
+        }
       }
     }
 
@@ -340,13 +390,18 @@ class PacketGenerator {
     } else {
       // Split mode: divide into 3 parts
       final chunkSize = (data.length / 3).ceil();
-      final part1 =
-          _countBlackPixels(data.sublist(0, chunkSize.clamp(0, data.length)));
-      final part2 = _countBlackPixels(data.sublist(
+      final part1 = _countBlackPixels(
+        data.sublist(0, chunkSize.clamp(0, data.length)),
+      );
+      final part2 = _countBlackPixels(
+        data.sublist(
           chunkSize.clamp(0, data.length),
-          (chunkSize * 2).clamp(0, data.length)));
+          (chunkSize * 2).clamp(0, data.length),
+        ),
+      );
       final part3 = _countBlackPixels(
-          data.sublist((chunkSize * 2).clamp(0, data.length), data.length));
+        data.sublist((chunkSize * 2).clamp(0, data.length), data.length),
+      );
       return [part1, part2, part3];
     }
   }
